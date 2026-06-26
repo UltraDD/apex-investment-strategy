@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apex 投资策略"
+  short_description: "Local momentum strategy workspace"
+  default_prompt: "Use $apex-investment-strategy to initialize a local research-only Apex investment strategy workspace."

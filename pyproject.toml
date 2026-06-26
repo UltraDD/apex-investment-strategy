@@ -1,0 +1,7 @@
+[project]
+name = "apex-investment-strategy"
+version = "1.0.0"
+description = "Public Codex skill for local-first Apex-style momentum investing research."
+requires-python = ">=3.10"
+dependencies = []
+

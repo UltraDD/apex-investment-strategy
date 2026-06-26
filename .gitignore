@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# Generated local strategy workspaces and data
+demo-apex/
+example-apex/
+*.sqlite
+*.sqlite3
+*.db
+reports/
+wallet/
+web/
+data/
+logs/
+
+# Local secrets
+.env
+*.env
+config.local.json
+secrets.json
+

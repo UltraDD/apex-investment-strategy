@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run tests
+        run: python -m unittest discover -s tests
+      - name: Smoke test scripts
+        run: |
+          python skills/apex-investment-strategy/scripts/init_project.py --project-dir ./demo-apex
+          python skills/apex-investment-strategy/scripts/init_database.py --project-dir ./demo-apex --sample
+          python skills/apex-investment-strategy/scripts/validate_data.py --project-dir ./demo-apex
+          python skills/apex-investment-strategy/scripts/run_backtest.py --project-dir ./demo-apex
+          python skills/apex-investment-strategy/scripts/init_wallet.py --project-dir ./demo-apex --capital 100000
+          python skills/apex-investment-strategy/scripts/build_action_packet.py --project-dir ./demo-apex
+          python skills/apex-investment-strategy/scripts/scaffold_web.py --project-dir ./demo-apex
