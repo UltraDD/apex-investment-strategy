@@ -28,6 +28,7 @@ This repository packages a public Codex skill plus zero-dependency local scripts
 | Safety boundary | `DISCLAIMER.md` | Financial and tooling disclaimers |
 | Python toolkit | `skills/apex-investment-strategy/scripts/` | Local project/database/backtest/wallet/dashboard commands |
 | User-facing guides | `skills/apex-investment-strategy/references/` | Layer-specific implementation details |
+| Apex alignment guide | `skills/apex-investment-strategy/references/apex-alignment-guide.md` | Helping users grow the public setup toward a 17-asset Apex-like workflow |
 | Static dashboard template | `skills/apex-investment-strategy/assets/web-template/` | Frontend scaffold source |
 | Tests | `tests/` | Behavior verification |
 
@@ -46,6 +47,7 @@ This repository packages a public Codex skill plus zero-dependency local scripts
 ## Maintenance Rules
 
 - Keep the baseline dependency-free.
+- Keep `--profile apex17` public and privacy-safe: it may scaffold the 17-asset shape, but must not include private production data, credentials, wallets, or broker state.
 - Do not commit generated demo workspaces, SQLite files, wallet files, or Action Packet outputs.
 - Do not mention or depend on private workspace paths.
 - Any new optional layer must be documented as optional in README and SKILL.md.

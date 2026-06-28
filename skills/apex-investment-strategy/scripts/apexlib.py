@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import copy
 import csv
 import datetime as dt
 import json
@@ -37,6 +38,53 @@ DEFAULT_CONFIG: dict[str, Any] = {
         {"id": "hs300", "name": "CSI 300 proxy", "group": "china_broad"},
         {"id": "csi500", "name": "CSI 500 proxy", "group": "china_broad"},
         {"id": "cash", "name": "Cash placeholder", "group": "cash"},
+    ],
+}
+
+APEX_ALIGNED_17_CONFIG: dict[str, Any] = {
+    "schema_version": 1,
+    "profile": "apex17",
+    "currency": "CNY",
+    "strategy": {
+        "lookback_days": 252,
+        "skip_recent_days": 21,
+        "moving_average_days": 160,
+        "breadth_min_ratio": 0.33,
+        "fallback_asset": "sp500",
+        "min_history_days": 320,
+        "min_trade_value": 100.0,
+        "selection_mode": "single_winner_public_baseline",
+        "next_extensions": [
+            "significance_tournament",
+            "volatility_position_sizing",
+            "risk_defense_gates",
+            "execution_calendar_mapping",
+        ],
+    },
+    "assets": [
+        {"id": "hs300", "name": "CSI 300 proxy", "group": "china_broad"},
+        {"id": "sse50", "name": "SSE 50 proxy", "group": "china_broad"},
+        {"id": "csi500", "name": "CSI 500 proxy", "group": "china_broad"},
+        {"id": "csi_div", "name": "CSI dividend proxy", "group": "china_style"},
+        {"id": "chinext", "name": "ChiNext proxy", "group": "china_growth"},
+        {"id": "bse50", "name": "BSE 50 proxy", "group": "china_growth"},
+        {"id": "consumer", "name": "China consumer proxy", "group": "china_sector"},
+        {"id": "healthcare", "name": "China healthcare proxy", "group": "china_sector"},
+        {"id": "financials", "name": "China financials proxy", "group": "china_sector"},
+        {"id": "infotech", "name": "China information technology proxy", "group": "china_sector"},
+        {"id": "military", "name": "China military industry proxy", "group": "china_sector"},
+        {"id": "newenergy", "name": "China new energy proxy", "group": "china_sector"},
+        {"id": "realestate", "name": "China real estate proxy", "group": "china_sector"},
+        {"id": "semiconductor", "name": "China semiconductor proxy", "group": "china_sector"},
+        {"id": "nonferrous", "name": "China non-ferrous metals proxy", "group": "china_sector"},
+        {"id": "sp500", "name": "S&P 500 proxy", "group": "external_equity"},
+        {"id": "nasdaq100", "name": "Nasdaq 100 proxy", "group": "external_equity"},
+        {"id": "cash", "name": "Cash placeholder", "group": "cash"},
+    ],
+    "alignment_notes": [
+        "This public profile is a privacy-safe starting point for an Apex-like 17-asset workspace.",
+        "It does not include private production data, broker state, paid credentials, or personalized trading rules.",
+        "Use the alignment guide before adding tournament, volatility sizing, or risk-defense behavior.",
     ],
 }
 
@@ -117,7 +165,16 @@ def asset_ids(config: dict[str, Any], include_cash: bool = False) -> list[str]:
     return [asset_id for asset_id in ids if asset_id != "cash"]
 
 
-def ensure_project(project_dir: str | Path, overwrite: bool = False) -> Path:
+def profile_config(profile: str = "minimal") -> dict[str, Any]:
+    normalized = profile.strip().lower()
+    if normalized in {"minimal", "default"}:
+        return copy.deepcopy(DEFAULT_CONFIG)
+    if normalized in {"apex17", "apex-aligned-17"}:
+        return copy.deepcopy(APEX_ALIGNED_17_CONFIG)
+    raise ValueError("Unknown profile. Use 'minimal' or 'apex17'.")
+
+
+def ensure_project(project_dir: str | Path, overwrite: bool = False, profile: str = "minimal") -> Path:
     root = project_root(project_dir)
     root.mkdir(parents=True, exist_ok=True)
     for dirname in ("data", "reports", "wallet", "web", "logs"):
@@ -125,12 +182,18 @@ def ensure_project(project_dir: str | Path, overwrite: bool = False) -> Path:
 
     cfg = config_path(root)
     if overwrite or not cfg.exists():
-        write_json(cfg, DEFAULT_CONFIG)
+        write_json(cfg, profile_config(profile))
 
     readme = root / "README.md"
     if overwrite or not readme.exists():
+        profile_line = (
+            "This workspace uses the public Apex-aligned 17-asset profile.\n\n"
+            if profile.strip().lower() in {"apex17", "apex-aligned-17"}
+            else ""
+        )
         readme.write_text(
             "# Local Apex Investment Strategy Workspace\n\n"
+            f"{profile_line}"
             "This workspace is local and research-only. Generated data, wallet files, "
             "and reports should stay private unless you intentionally sanitize and publish them.\n\n"
             "Typical flow:\n\n"

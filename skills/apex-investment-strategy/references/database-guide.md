@@ -15,6 +15,8 @@ For a smoke test with deterministic sample data:
 python scripts/init_database.py --project-dir ./my-apex --sample
 ```
 
+If the workspace was initialized with `--profile apex17`, the same CSV rules apply. Provide rows for all 17 configured asset ids before treating validation or backtest output as market evidence.
+
 ## CSV Schema
 
 Required columns:
@@ -71,4 +73,3 @@ The validator checks:
 - whether each asset meets `min_history_days`
 
 It does not certify data correctness. Users still need to verify splits, dividends, adjusted vs unadjusted prices, time zones, stale rows, and missing days.
-

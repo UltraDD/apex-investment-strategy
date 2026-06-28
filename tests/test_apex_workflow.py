@@ -58,6 +58,25 @@ class ApexWorkflowTests(unittest.TestCase):
             self.assertIn("Apex Investment Strategy", html)
             self.assertNotIn("__ACTION_JSON__", html)
 
+    def test_apex17_profile_scaffolds_public_alignment_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "workspace"
+
+            ensure_project(project, profile="apex17")
+            config = json.loads((project / "config.json").read_text(encoding="utf-8"))
+            tradable_assets = [asset["id"] for asset in config["assets"] if asset["id"] != "cash"]
+
+            self.assertEqual(len(tradable_assets), 17)
+            self.assertIn("semiconductor", tradable_assets)
+            self.assertEqual(config["strategy"]["lookback_days"], 252)
+
+            init_result = initialize_database(project, sample=True)
+            self.assertEqual(init_result["imported_rows"], 17 * 560)
+
+            health = validate_data(project)
+            self.assertTrue(health["ok"])
+            self.assertEqual(len(health["assets"]), 17)
+
     def test_validator_flags_missing_history(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "workspace"

@@ -17,6 +17,7 @@ Treat every output as research infrastructure, not as personalized investment ad
 |---|---|---|
 | Understand Apex / momentum investing | Read `references/strategy-framework.md` | Explain risks from `references/risk-and-disclaimer.md` |
 | Build from zero | Run `scripts/init_project.py --project-dir <dir>` | Continue with database setup |
+| Build closer to the Apex 17-asset shape | Read `references/apex-alignment-guide.md`; run `scripts/init_project.py --project-dir <dir> --profile apex17` | Import local 17-asset price data, then validate and run the baseline |
 | Build a minimum database | Read `references/database-guide.md`; run `scripts/init_database.py` | Run `scripts/validate_data.py` |
 | Import or validate price data | Use CSV schema in `references/database-guide.md` | Run backtest after coverage is enough |
 | Run research backtest | Read `references/backtest-guide.md`; run `scripts/run_backtest.py` | Explain metrics and caveats |
@@ -28,6 +29,7 @@ Treat every output as research infrastructure, not as personalized investment ad
 
 - Start light. Do not create a database, wallet, or web app unless the user asks for that layer.
 - Keep the baseline dependency-free: Python standard library and SQLite only.
+- Use `--profile apex17` when the user wants a public 17-asset Apex-aligned starting point. Make clear that this is a scaffold, not the private production system.
 - Use sample data only for smoke tests and UI previews. Never present sample results as market evidence.
 - Treat 320 effective trading days as the hard minimum for the default momentum windows; prefer 400-500 days for signal work and 3-5 years for meaningful backtests.
 - Create a paper wallet by default. Only create real-trade templates after explicit user confirmation.
@@ -39,6 +41,7 @@ Run scripts from the installed skill directory or from this repository:
 
 ```bash
 python scripts/init_project.py --project-dir ./my-apex
+python scripts/init_project.py --project-dir ./my-apex-17 --profile apex17
 python scripts/init_database.py --project-dir ./my-apex --sample
 python scripts/validate_data.py --project-dir ./my-apex
 python scripts/run_backtest.py --project-dir ./my-apex

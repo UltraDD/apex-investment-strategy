@@ -48,6 +48,20 @@ python skills/apex-investment-strategy/scripts/scaffold_web.py --project-dir ./d
 
 Open `demo-apex/web/index.html` in a browser.
 
+## Apex-Aligned 17-Asset Track
+
+The default quick start is intentionally small. If you want a workspace that is closer to the public shape of Apex, initialize with the 17-asset profile:
+
+```bash
+python skills/apex-investment-strategy/scripts/init_project.py --project-dir ./my-apex --profile apex17
+python skills/apex-investment-strategy/scripts/init_database.py --project-dir ./my-apex --sample
+python skills/apex-investment-strategy/scripts/validate_data.py --project-dir ./my-apex
+```
+
+The `apex17` profile scaffolds a public 17-asset universe and keeps the same runnable baseline. It does not ship live data, private production rules, paid credentials, broker integration, or personal wallet state.
+
+For a guided migration from sample data toward a fuller Apex-like research setup, read `skills/apex-investment-strategy/references/apex-alignment-guide.md`.
+
 ## Dependency Model
 
 The baseline has no pip dependencies.
@@ -95,4 +109,3 @@ tests/
 ## Safety
 
 Every generated output is research-only. Use your own judgment, consult qualified professionals for financial decisions, and verify data quality before relying on any signal.
-
