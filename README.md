@@ -2,7 +2,7 @@
 
 Apex Investment Strategy is a public Codex skill and local-first Python toolkit for exploring momentum-style investing workflows.
 
-It can stay lightweight as a strategy explainer, or guide a user step by step into a minimum SQLite database, research backtests, a paper wallet, local Action Packets, and a static web dashboard.
+It can stay lightweight as a strategy explainer, help interpret recent portfolio volatility with public evidence, or guide a user step by step into a minimum SQLite database, research backtests, a paper wallet, local Action Packets, and a static web dashboard.
 
 This repository is research tooling only. It contains no private wallet data, no paid data credentials, no broker integration, no real trading automation, and no personal production system state.
 
@@ -10,7 +10,7 @@ This repository is research tooling only. It contains no private wallet data, no
 
 - A public Codex skill: `skills/apex-investment-strategy`
 - A zero-pip Python toolkit using only the Python standard library and SQLite
-- A local research workflow for price data, momentum signals, backtests, wallet drift, Action Packets, and static dashboard generation
+- A local research workflow for price data, momentum signals, volatility explanations, backtests, wallet drift, Action Packets, and static dashboard generation
 - A starting point users can fork and adapt to their own data and constraints
 
 ## What This Is Not
@@ -69,6 +69,7 @@ Restart Codex after installation. Then you can ask:
 
 ```text
 Use apex-investment-strategy to initialize a local research workspace in ./my-apex with sample data.
+Use apex-investment-strategy to explain the last few days of portfolio volatility using my local Action Packet and current public sources.
 ```
 
 ## Quick Start From Source
