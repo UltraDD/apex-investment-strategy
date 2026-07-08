@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Apex Investment Strategy</title>
+    <title>Apex 资产动量研究与AI解读工具</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -222,6 +222,14 @@
         line-height: 1.5;
       }
 
+      .brief-text {
+        margin: 0;
+        white-space: pre-wrap;
+        color: var(--label-primary);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
       @media (max-width: 760px) {
         .shell {
           width: min(100% - 24px, 1120px);
@@ -255,30 +263,30 @@
     <main class="shell">
       <header class="topbar">
         <div class="title-group">
-          <h1>Apex Investment Strategy</h1>
-          <p class="subtitle">Local research dashboard generated from your workspace.</p>
+          <h1>Apex 资产动量研究与AI解读工具</h1>
+          <p class="subtitle">由本地研究工作区生成的静态报告。</p>
         </div>
-        <div class="status-pill" id="status-pill">Research only</div>
+        <div class="status-pill" id="status-pill">仅研究用途</div>
       </header>
 
       <section class="grid">
         <article class="panel span-8">
           <div class="panel-header">
-            <h2>Current Signal</h2>
+            <h2>当前信号</h2>
             <span class="muted" id="signal-date"></span>
           </div>
           <div class="panel-body">
             <div class="metric-grid">
               <div class="metric">
-                <div class="metric-label">Selected asset</div>
+                <div class="metric-label">当前标的</div>
                 <div class="metric-value" id="selected-asset"></div>
               </div>
               <div class="metric">
-                <div class="metric-label">Reason</div>
+                <div class="metric-label">触发原因</div>
                 <div class="metric-value" id="signal-reason"></div>
               </div>
               <div class="metric">
-                <div class="metric-label">Breadth</div>
+                <div class="metric-label">动量广度</div>
                 <div class="metric-value" id="breadth"></div>
               </div>
             </div>
@@ -288,20 +296,20 @@
 
         <article class="panel span-4">
           <div class="panel-header">
-            <h2>Backtest Summary</h2>
+            <h2>回测摘要</h2>
           </div>
           <div class="panel-body">
             <div class="metric-grid">
               <div class="metric">
-                <div class="metric-label">CAGR</div>
+                <div class="metric-label">年化收益率</div>
                 <div class="metric-value" id="cagr"></div>
               </div>
               <div class="metric">
-                <div class="metric-label">Max drawdown</div>
+                <div class="metric-label">最大回撤</div>
                 <div class="metric-value" id="mdd"></div>
               </div>
               <div class="metric">
-                <div class="metric-label">Turnover events</div>
+                <div class="metric-label">调仓次数</div>
                 <div class="metric-value" id="turnover"></div>
               </div>
             </div>
@@ -310,14 +318,14 @@
 
         <article class="panel span-4">
           <div class="panel-header">
-            <h2>Target Weights</h2>
+            <h2>目标权重</h2>
           </div>
           <div class="panel-body">
             <table>
               <thead>
                 <tr>
-                  <th>Asset</th>
-                  <th>Weight</th>
+                  <th>标的</th>
+                  <th>权重</th>
                 </tr>
               </thead>
               <tbody id="weights"></tbody>
@@ -327,22 +335,35 @@
 
         <article class="panel span-8">
           <div class="panel-header">
-            <h2>Suggested Paper Trades</h2>
-            <span class="muted">Local drift table</span>
+            <h2>纸面调仓测算</h2>
+            <span class="muted">本地偏离表</span>
           </div>
           <div class="panel-body">
             <table>
               <thead>
                 <tr>
-                  <th>Asset</th>
-                  <th>Side</th>
-                  <th>Value</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
+                  <th>标的</th>
+                  <th>方向</th>
+                  <th>金额</th>
+                  <th>数量</th>
+                  <th>参考价</th>
                 </tr>
               </thead>
               <tbody id="trades"></tbody>
             </table>
+          </div>
+        </article>
+
+        <article class="panel span-12">
+          <div class="panel-header">
+            <h2>AI 研究解读</h2>
+            <span class="muted" id="ai-brief-status">可选解读层</span>
+          </div>
+          <div class="panel-body">
+            <p class="brief-text" id="ai-brief-text"></p>
+            <div class="notice">
+              AI 解读内容仅由本地研究文件生成，用于研究说明，不构成投资建议或交易指令。
+            </div>
           </div>
         </article>
       </section>
@@ -351,20 +372,57 @@
     <script>
       const action = __ACTION_JSON__;
       const summary = __SUMMARY_JSON__;
+      const aiBrief = __AI_BRIEF_JSON__;
+
+      const assetNames = {
+        hs300: "沪深300",
+        sse50: "上证50",
+        csi500: "中证500",
+        csi_div: "中证红利",
+        chinext: "创业板",
+        bse50: "北证50",
+        consumer: "消费",
+        healthcare: "医药",
+        financials: "金融",
+        infotech: "信息技术",
+        military: "军工",
+        newenergy: "新能源",
+        realestate: "房地产",
+        semiconductor: "半导体",
+        nonferrous: "有色金属",
+        sp500: "标普500",
+        nasdaq100: "纳指100",
+        cash: "现金",
+      };
+      const statusLabels = {
+        research_only: "仅研究用途",
+        ai_generated: "已生成",
+      };
+      const reasonLabels = {
+        fallback: "触发兜底规则",
+        momentum_winner: "动量胜出",
+      };
+      const sideLabels = {
+        buy: "买入",
+        sell: "卖出",
+      };
+      const displayAsset = (asset) => assetNames[asset] || asset || "无数据";
+      const displayStatus = (status) => statusLabels[status] || status || "仅研究用途";
 
       const fmtPct = (value) =>
         typeof value === "number"
-          ? new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 2 }).format(value)
-          : "n/a";
+          ? new Intl.NumberFormat("zh-CN", { style: "percent", maximumFractionDigits: 2 }).format(value)
+          : "无数据";
       const fmtNum = (value) =>
         typeof value === "number"
-          ? new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(value)
-          : "n/a";
+          ? new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value)
+          : "无数据";
 
-      document.getElementById("status-pill").textContent = action.status || "research_only";
+      document.getElementById("status-pill").textContent = displayStatus(action.status);
       document.getElementById("signal-date").textContent = action.signal_date || "";
-      document.getElementById("selected-asset").textContent = action.signal?.selected_asset || "n/a";
-      document.getElementById("signal-reason").textContent = action.signal?.reason || "n/a";
+      document.getElementById("selected-asset").textContent = displayAsset(action.signal?.selected_asset);
+      document.getElementById("signal-reason").textContent =
+        reasonLabels[action.signal?.reason] || action.signal?.reason || "无数据";
       document.getElementById("breadth").textContent = fmtPct(action.signal?.breadth);
       document.getElementById("disclaimer").textContent = action.disclaimer || "";
       document.getElementById("cagr").textContent = fmtPct(summary.cagr);
@@ -374,7 +432,7 @@
       const weightsBody = document.getElementById("weights");
       Object.entries(action.target_weights || {}).forEach(([asset, weight]) => {
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${asset}</td><td class="number">${fmtPct(weight)}</td>`;
+        row.innerHTML = `<td>${displayAsset(asset)}</td><td class="number">${fmtPct(weight)}</td>`;
         weightsBody.appendChild(row);
       });
 
@@ -382,14 +440,14 @@
       const trades = action.recommended_trades || [];
       if (trades.length === 0) {
         const row = document.createElement("tr");
-        row.innerHTML = '<td colspan="5" class="muted">No suggested paper trades above the minimum value threshold.</td>';
+        row.innerHTML = '<td colspan="5" class="muted">当前没有超过最小金额阈值的纸面调仓项。</td>';
         tradesBody.appendChild(row);
       } else {
         trades.forEach((trade) => {
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${trade.asset_id}</td>
-            <td>${trade.side}</td>
+            <td>${displayAsset(trade.asset_id)}</td>
+            <td>${sideLabels[trade.side] || trade.side}</td>
             <td class="number">${fmtNum(trade.estimated_value)}</td>
             <td class="number">${fmtNum(trade.estimated_quantity)}</td>
             <td class="number">${fmtNum(trade.reference_price)}</td>
@@ -397,7 +455,16 @@
           tradesBody.appendChild(row);
         });
       }
+
+      const aiBriefStatus = document.getElementById("ai-brief-status");
+      const aiBriefText = document.getElementById("ai-brief-text");
+      if (aiBrief?.brief_markdown) {
+        aiBriefStatus.textContent = `${displayStatus(aiBrief.status || "ai_generated")} · ${aiBrief.model || "模型"}`;
+        aiBriefText.textContent = aiBrief.brief_markdown;
+      } else {
+        aiBriefStatus.textContent = "未生成";
+        aiBriefText.textContent = "运行 AI 解读命令后，这里会显示本地研究简报。";
+      }
     </script>
   </body>
 </html>
-

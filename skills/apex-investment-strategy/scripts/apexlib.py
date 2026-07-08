@@ -7,8 +7,11 @@ import csv
 import datetime as dt
 import json
 import math
+import os
 import sqlite3
 import sys
+import urllib.error
+import urllib.request
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,9 +19,16 @@ from typing import Any, Iterator
 
 
 DISCLAIMER = (
-    "Research-only local output. This is not personalized financial advice, "
-    "not live performance, and not an instruction to trade."
+    "本地研究输出，仅用于研究，不构成个性化投资建议、实盘表现或交易指令。"
 )
+
+AI_SYSTEM_PROMPT = (
+    "You are the AI research interpretation layer inside a local momentum research tool. "
+    "Explain only the provided local research outputs. Do not provide personalized financial advice, "
+    "do not tell the user to buy or sell, do not promise returns, and do not invent missing data."
+)
+DEFAULT_AI_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_AI_MODEL = "gpt-4.1-mini"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "schema_version": 1,
@@ -37,7 +47,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         {"id": "nasdaq100", "name": "Nasdaq 100 proxy", "group": "external_equity"},
         {"id": "hs300", "name": "CSI 300 proxy", "group": "china_broad"},
         {"id": "csi500", "name": "CSI 500 proxy", "group": "china_broad"},
-        {"id": "cash", "name": "Cash placeholder", "group": "cash"},
+        {"id": "cash", "name": "Cash reserve", "group": "cash"},
     ],
 }
 
@@ -79,7 +89,7 @@ APEX_ALIGNED_17_CONFIG: dict[str, Any] = {
         {"id": "nonferrous", "name": "China non-ferrous metals proxy", "group": "china_sector"},
         {"id": "sp500", "name": "S&P 500 proxy", "group": "external_equity"},
         {"id": "nasdaq100", "name": "Nasdaq 100 proxy", "group": "external_equity"},
-        {"id": "cash", "name": "Cash placeholder", "group": "cash"},
+        {"id": "cash", "name": "Cash reserve", "group": "cash"},
     ],
     "alignment_notes": [
         "This public profile is a privacy-safe starting point for an Apex-like 17-asset workspace.",
@@ -604,7 +614,7 @@ def initialize_wallet(project_dir: str | Path, capital: float) -> dict[str, Any]
                 "quantity": "100",
                 "price": "1.23",
                 "fee": "1.00",
-                "note": "paper trade example",
+                "note": "initial paper trade record",
             }
         )
     return {"wallet": str(db_path(root)), "starting_cash": capital, "template": str(template)}
@@ -708,6 +718,176 @@ def build_action_packet(project_dir: str | Path) -> dict[str, Any]:
     return packet
 
 
+def read_csv_tail(path: Path, limit: int = 6) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", newline="", encoding="utf-8-sig") as handle:
+        rows = list(csv.DictReader(handle))
+    return rows[-limit:]
+
+
+def collect_ai_research_context(project_dir: str | Path) -> dict[str, Any]:
+    root = project_root(project_dir)
+    reports = root / "reports"
+    packet_path = reports / "latest-action.json"
+    summary_path = reports / "backtest-summary.json"
+    health_path = reports / "data-health.json"
+    signals_path = reports / "signals.csv"
+
+    if not packet_path.exists():
+        build_action_packet(root)
+    if not summary_path.exists():
+        run_backtest(root)
+    if not health_path.exists():
+        validate_data(root)
+
+    packet = read_json(packet_path)
+    summary = read_json(summary_path)
+    health = read_json(health_path)
+    signals_tail = read_csv_tail(signals_path)
+    return {
+        "disclaimer": DISCLAIMER,
+        "source_files": [
+            str(packet_path),
+            str(summary_path),
+            str(health_path),
+            str(signals_path),
+        ],
+        "action_packet": packet,
+        "backtest_summary": summary,
+        "data_health": health,
+        "recent_signals": signals_tail,
+    }
+
+
+def build_ai_research_prompt(context: dict[str, Any]) -> list[dict[str, str]]:
+    compact_context = {
+        "disclaimer": context["disclaimer"],
+        "action_packet": context["action_packet"],
+        "backtest_summary": context["backtest_summary"],
+        "data_health": context["data_health"],
+        "recent_signals": context["recent_signals"],
+    }
+    return [
+        {"role": "system", "content": AI_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                "Write a concise Chinese research brief from this local Apex workspace context. "
+                "Cover current signal, data quality, backtest caveats, paper-wallet drift, and next checks. "
+                "Keep it research-only and avoid trade instructions.\n\n"
+                + json.dumps(compact_context, ensure_ascii=False, indent=2)
+            ),
+        },
+    ]
+
+
+def call_openai_compatible_chat(
+    messages: list[dict[str, str]],
+    api_key: str,
+    base_url: str,
+    model: str,
+    timeout: float = 30.0,
+) -> str:
+    endpoint = base_url.rstrip("/") + "/chat/completions"
+    payload = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": 900,
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise ValueError(f"AI request failed with HTTP {exc.code}: {body[:300]}") from exc
+    except urllib.error.URLError as exc:
+        raise ValueError(f"AI request failed: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise ValueError("AI request timed out") from exc
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("AI response was not valid JSON") from exc
+    try:
+        content = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ValueError("AI response did not contain message content") from exc
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("AI response content was empty")
+    return content.strip()
+
+
+def generate_ai_research_brief(
+    project_dir: str | Path,
+    base_url: str | None = None,
+    model: str | None = None,
+    timeout: float = 30.0,
+) -> dict[str, Any]:
+    root = project_root(project_dir)
+    context = collect_ai_research_context(root)
+    resolved_base_url = base_url or os.environ.get("APEX_AI_BASE_URL") or os.environ.get("OPENAI_BASE_URL") or DEFAULT_AI_BASE_URL
+    resolved_model = model or os.environ.get("APEX_AI_MODEL") or os.environ.get("OPENAI_MODEL") or DEFAULT_AI_MODEL
+
+    api_key = os.environ.get("APEX_AI_API_KEY") or os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("缺少 AI 接口密钥。请设置 APEX_AI_API_KEY 或 OPENAI_API_KEY。")
+    messages = build_ai_research_prompt(context)
+    brief = call_openai_compatible_chat(messages, api_key, resolved_base_url, resolved_model, timeout=timeout)
+    status = "ai_generated"
+
+    packet = context["action_packet"]
+    summary = context["backtest_summary"]
+    health = context["data_health"]
+    record = {
+        "status": status,
+        "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "provider": "openai_compatible_chat_completions",
+        "base_url": resolved_base_url,
+        "model": resolved_model,
+        "disclaimer": DISCLAIMER,
+        "source_files": context["source_files"],
+        "input_summary": {
+            "signal_date": packet.get("signal_date"),
+            "selected_asset": packet.get("signal", {}).get("selected_asset"),
+            "signal_reason": packet.get("signal", {}).get("reason"),
+            "data_ok": health.get("ok"),
+            "backtest_periods": summary.get("periods"),
+            "recommended_trade_count": len(packet.get("recommended_trades", [])),
+        },
+        "brief_markdown": brief,
+    }
+    reports = root / "reports"
+    json_path = reports / "ai-brief.json"
+    md_path = reports / "ai-brief.md"
+    write_json(json_path, record)
+    md_path.write_text(
+        "# AI 研究解读\n\n"
+        f"{DISCLAIMER}\n\n"
+        f"- 生成时间：{record['generated_at']}\n"
+        f"- 模型：{resolved_model}\n"
+        "- 状态：已生成\n\n"
+        "## 解读正文\n\n"
+        f"{brief}\n",
+        encoding="utf-8",
+    )
+    return {"ai_brief_json": str(json_path), "ai_brief_md": str(md_path), "status": status}
+
+
 def scaffold_web(project_dir: str | Path) -> dict[str, Any]:
     root = project_root(project_dir)
     packet_path = root / "reports" / "latest-action.json"
@@ -719,11 +899,14 @@ def scaffold_web(project_dir: str | Path) -> dict[str, Any]:
 
     packet = read_json(packet_path)
     summary = read_json(summary_path)
+    ai_brief_path = root / "reports" / "ai-brief.json"
+    ai_brief = read_json(ai_brief_path) if ai_brief_path.exists() else None
     skill_dir = Path(__file__).resolve().parents[1]
     template = (skill_dir / "assets" / "web-template" / "index.html").read_text(encoding="utf-8")
     rendered = (
         template.replace("__ACTION_JSON__", json.dumps(packet, ensure_ascii=False))
         .replace("__SUMMARY_JSON__", json.dumps(summary, ensure_ascii=False))
+        .replace("__AI_BRIEF_JSON__", json.dumps(ai_brief, ensure_ascii=False))
     )
     output = root / "web" / "index.html"
     output.parent.mkdir(parents=True, exist_ok=True)

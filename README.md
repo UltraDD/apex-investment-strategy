@@ -10,7 +10,7 @@ This repository is research tooling only. It contains no private wallet data, no
 
 - A public Codex skill: `skills/apex-investment-strategy`
 - A zero-pip Python toolkit using only the Python standard library and SQLite
-- A local research workflow for price data, momentum signals, volatility explanations, backtests, wallet drift, Action Packets, and static dashboard generation
+- A local research workflow for price data, momentum signals, volatility explanations, backtests, wallet drift, Action Packets, AI research briefs, and static dashboard generation
 - A starting point users can fork and adapt to their own data and constraints
 
 ## What This Is Not
@@ -29,6 +29,8 @@ This repository is research tooling only. It contains no private wallet data, no
 - Optional: Codex skill support if you want to install the skill into Codex
 
 No pip install is required for the baseline workflow.
+
+The optional AI research brief uses an OpenAI-compatible chat-completions API. Set `APEX_AI_API_KEY` or `OPENAI_API_KEY` before running `explain_report.py`; set `APEX_AI_MODEL` or `OPENAI_MODEL` if you want to control the model.
 
 ## Fastest Smoke Test
 
@@ -84,6 +86,7 @@ python skills/apex-investment-strategy/scripts/validate_data.py --project-dir ./
 python skills/apex-investment-strategy/scripts/run_backtest.py --project-dir ./demo-apex
 python skills/apex-investment-strategy/scripts/init_wallet.py --project-dir ./demo-apex --capital 100000
 python skills/apex-investment-strategy/scripts/build_action_packet.py --project-dir ./demo-apex
+python skills/apex-investment-strategy/scripts/explain_report.py --project-dir ./demo-apex
 python skills/apex-investment-strategy/scripts/scaffold_web.py --project-dir ./demo-apex
 ```
 
@@ -99,6 +102,8 @@ demo-apex/
   reports/backtest-summary.json
   reports/signals.csv
   reports/latest-action.json
+  reports/ai-brief.json
+  reports/ai-brief.md
   wallet/transactions.example.csv
   web/index.html
 ```
@@ -122,6 +127,7 @@ What to expect:
 - `validate_data.py` should report enough sample history for the default assets.
 - `run_backtest.py` writes `reports/backtest-summary.json` and `reports/signals.csv`.
 - `build_action_packet.py` writes `reports/latest-action.json`.
+- `explain_report.py` reads local report files and writes `reports/ai-brief.json` plus `reports/ai-brief.md` when an AI API key is configured.
 - All outputs are marked research-only and use generated sample data unless you import your own CSV.
 
 Sample results are smoke-test evidence only. Do not treat them as market evidence, live performance, or a trading signal.
@@ -151,6 +157,7 @@ The baseline has no pip dependencies.
 | Database | SQLite via Python standard library |
 | Backtest | Python standard library |
 | Paper wallet | SQLite via Python standard library |
+| AI research brief | OpenAI-compatible chat-completions API |
 | Static dashboard | Browser only |
 | Advanced dashboard | Bring your own stack if you extend it |
 

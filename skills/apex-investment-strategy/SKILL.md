@@ -22,7 +22,8 @@ Treat every output as research infrastructure, not as personalized investment ad
 | Import or validate price data | Use CSV schema in `references/database-guide.md` | Run backtest after coverage is enough |
 | Run research backtest | Read `references/backtest-guide.md`; run `scripts/run_backtest.py` | Explain metrics and caveats |
 | Create wallet | Read `references/wallet-guide.md`; run `scripts/init_wallet.py` | Build Action Packet |
-| Generate local Action Packet | Read `references/action-packet-guide.md`; run `scripts/build_action_packet.py` | Scaffold web dashboard |
+| Generate local Action Packet | Read `references/action-packet-guide.md`; run `scripts/build_action_packet.py` | Generate AI research brief, then scaffold web dashboard |
+| Generate AI research brief | Run `scripts/explain_report.py --project-dir <dir>` with `APEX_AI_API_KEY` or `OPENAI_API_KEY` configured | Scaffold web dashboard to display the brief |
 | Discuss recent portfolio / holding volatility | Read `references/market-companion-mode.md` and `references/risk-and-disclaimer.md` | Use local Action Packet / wallet / price evidence plus current public sources; explain strategy discipline, not personal trade decisions |
 | Build frontend dashboard | Read `references/web-console-guide.md`; run `scripts/scaffold_web.py` | Open generated `web/index.html` |
 
@@ -35,6 +36,7 @@ Treat every output as research infrastructure, not as personalized investment ad
 - Treat 320 effective trading days as the hard minimum for the default momentum windows; prefer 400-500 days for signal work and 3-5 years for meaningful backtests.
 - Create a paper wallet by default. Only create real-trade templates after explicit user confirmation.
 - Generate Action Packets as local decision support: target weights, data health, wallet drift, and trade table. Do not auto-trade.
+- Generate AI research briefs only from local report files. Do not let the AI layer invent missing data, override the strategy signal, or turn commentary into trade instructions.
 - In market-companion mode, separate local strategy evidence from current-events interpretation. Do not turn a news narrative into a new signal unless the user's own strategy already defines that rule.
 
 ## Commands
@@ -49,6 +51,7 @@ python scripts/validate_data.py --project-dir ./my-apex
 python scripts/run_backtest.py --project-dir ./my-apex
 python scripts/init_wallet.py --project-dir ./my-apex --capital 100000
 python scripts/build_action_packet.py --project-dir ./my-apex
+python scripts/explain_report.py --project-dir ./my-apex
 python scripts/scaffold_web.py --project-dir ./my-apex
 ```
 

@@ -26,6 +26,7 @@ This repository packages a public Codex skill plus zero-dependency local scripts
 | Project overview | `README.md` | Public positioning, install, quick start |
 | Skill behavior | `skills/apex-investment-strategy/SKILL.md` | Codex invocation and workflow routing |
 | Safety boundary | `DISCLAIMER.md` | Financial and tooling disclaimers |
+| Software copyright workspace | `softcopyright/README.md` | Preparing Chinese software copyright application materials for the public toolkit |
 | Python toolkit | `skills/apex-investment-strategy/scripts/` | Local project/database/backtest/wallet/dashboard commands |
 | User-facing guides | `skills/apex-investment-strategy/references/` | Layer-specific implementation details |
 | Apex alignment guide | `skills/apex-investment-strategy/references/apex-alignment-guide.md` | Helping users grow the public setup toward a 17-asset Apex-like workflow |
@@ -43,6 +44,7 @@ This repository packages a public Codex skill plus zero-dependency local scripts
 | Assets | `skills/apex-investment-strategy/assets/` | Templates copied into user projects |
 | Tests | `tests/` | Unit and scenario tests for public scripts |
 | CI | `.github/workflows/` | Public validation only; no secrets |
+| Software copyright materials | `softcopyright/` | Generated drafts and final application materials; review privacy before publishing |
 
 ## Maintenance Rules
 
