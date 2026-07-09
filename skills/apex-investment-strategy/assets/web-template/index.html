@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Apex 资产动量研究与AI解读工具</title>
+    <title>Apex资产动量研究与AI解读软件</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -224,10 +224,33 @@
 
       .brief-text {
         margin: 0;
-        white-space: pre-wrap;
         color: var(--label-primary);
         font-size: 14px;
         line-height: 1.6;
+      }
+
+      .brief-text h3,
+      .brief-text h4 {
+        margin: 0 0 8px;
+        line-height: 1.35;
+      }
+
+      .brief-text h3 {
+        font-size: 18px;
+      }
+
+      .brief-text h4 {
+        margin-top: 18px;
+        font-size: 15px;
+      }
+
+      .brief-text p,
+      .brief-text ul {
+        margin: 0 0 12px;
+      }
+
+      .brief-text ul {
+        padding-left: 18px;
       }
 
       @media (max-width: 760px) {
@@ -263,7 +286,7 @@
     <main class="shell">
       <header class="topbar">
         <div class="title-group">
-          <h1>Apex 资产动量研究与AI解读工具</h1>
+          <h1>Apex资产动量研究与AI解读软件</h1>
           <p class="subtitle">由本地研究工作区生成的静态报告。</p>
         </div>
         <div class="status-pill" id="status-pill">仅研究用途</div>
@@ -360,7 +383,7 @@
             <span class="muted" id="ai-brief-status">可选解读层</span>
           </div>
           <div class="panel-body">
-            <p class="brief-text" id="ai-brief-text"></p>
+            <div class="brief-text" id="ai-brief-text"></div>
             <div class="notice">
               AI 解读内容仅由本地研究文件生成，用于研究说明，不构成投资建议或交易指令。
             </div>
@@ -370,8 +393,8 @@
     </main>
 
     <script>
-      const action = __ACTION_JSON__;
-      const summary = __SUMMARY_JSON__;
+      const researchPacket = __ACTION_JSON__;
+      const momentumSummary = __SUMMARY_JSON__;
       const aiBrief = __AI_BRIEF_JSON__;
 
       const assetNames = {
@@ -408,6 +431,53 @@
       };
       const displayAsset = (asset) => assetNames[asset] || asset || "无数据";
       const displayStatus = (status) => statusLabels[status] || status || "仅研究用途";
+      const escapeHtml = (value) =>
+        String(value ?? "").replace(/[&<>"']/g, (char) => (
+          { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]
+        ));
+
+      const renderBriefMarkdown = (markdown) => {
+        const parts = [];
+        let listOpen = false;
+        const closeList = () => {
+          if (listOpen) {
+            parts.push("</ul>");
+            listOpen = false;
+          }
+        };
+
+        String(markdown || "")
+          .split(/\r?\n/)
+          .forEach((rawLine) => {
+            const line = rawLine.trim();
+            if (!line) {
+              closeList();
+              return;
+            }
+            if (line.startsWith("- ")) {
+              if (!listOpen) {
+                parts.push("<ul>");
+                listOpen = true;
+              }
+              parts.push(`<li>${escapeHtml(line.slice(2))}</li>`);
+              return;
+            }
+
+            closeList();
+            if (line.startsWith("## ")) {
+              parts.push(`<h4>${escapeHtml(line.slice(3))}</h4>`);
+            } else if (line.startsWith("# ")) {
+              parts.push(`<h3>${escapeHtml(line.slice(2))}</h3>`);
+            } else if (line.startsWith("*") && line.endsWith("*")) {
+              parts.push(`<p class="muted"><em>${escapeHtml(line.slice(1, -1))}</em></p>`);
+            } else {
+              parts.push(`<p>${escapeHtml(line)}</p>`);
+            }
+          });
+
+        closeList();
+        return parts.join("");
+      };
 
       const fmtPct = (value) =>
         typeof value === "number"
@@ -418,32 +488,32 @@
           ? new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value)
           : "无数据";
 
-      document.getElementById("status-pill").textContent = displayStatus(action.status);
-      document.getElementById("signal-date").textContent = action.signal_date || "";
-      document.getElementById("selected-asset").textContent = displayAsset(action.signal?.selected_asset);
+      document.getElementById("status-pill").textContent = displayStatus(researchPacket.status);
+      document.getElementById("signal-date").textContent = researchPacket.signal_date || "";
+      document.getElementById("selected-asset").textContent = displayAsset(researchPacket.signal?.selected_asset);
       document.getElementById("signal-reason").textContent =
-        reasonLabels[action.signal?.reason] || action.signal?.reason || "无数据";
-      document.getElementById("breadth").textContent = fmtPct(action.signal?.breadth);
-      document.getElementById("disclaimer").textContent = action.disclaimer || "";
-      document.getElementById("cagr").textContent = fmtPct(summary.cagr);
-      document.getElementById("mdd").textContent = fmtPct(summary.max_drawdown);
-      document.getElementById("turnover").textContent = fmtNum(summary.turnover_events);
+        reasonLabels[researchPacket.signal?.reason] || researchPacket.signal?.reason || "无数据";
+      document.getElementById("breadth").textContent = fmtPct(researchPacket.signal?.breadth);
+      document.getElementById("disclaimer").textContent = researchPacket.disclaimer || "";
+      document.getElementById("cagr").textContent = fmtPct(momentumSummary.cagr);
+      document.getElementById("mdd").textContent = fmtPct(momentumSummary.max_drawdown);
+      document.getElementById("turnover").textContent = fmtNum(momentumSummary.turnover_events);
 
       const weightsBody = document.getElementById("weights");
-      Object.entries(action.target_weights || {}).forEach(([asset, weight]) => {
+      Object.entries(researchPacket.target_weights || {}).forEach(([asset, weight]) => {
         const row = document.createElement("tr");
         row.innerHTML = `<td>${displayAsset(asset)}</td><td class="number">${fmtPct(weight)}</td>`;
         weightsBody.appendChild(row);
       });
 
       const tradesBody = document.getElementById("trades");
-      const trades = action.recommended_trades || [];
-      if (trades.length === 0) {
+      const paperRebalanceRows = researchPacket.paper_rebalance_rows || researchPacket.recommended_trades || [];
+      if (paperRebalanceRows.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = '<td colspan="5" class="muted">当前没有超过最小金额阈值的纸面调仓项。</td>';
         tradesBody.appendChild(row);
       } else {
-        trades.forEach((trade) => {
+        paperRebalanceRows.forEach((trade) => {
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${displayAsset(trade.asset_id)}</td>
@@ -460,7 +530,7 @@
       const aiBriefText = document.getElementById("ai-brief-text");
       if (aiBrief?.brief_markdown) {
         aiBriefStatus.textContent = `${displayStatus(aiBrief.status || "ai_generated")} · ${aiBrief.model || "模型"}`;
-        aiBriefText.textContent = aiBrief.brief_markdown;
+        aiBriefText.innerHTML = renderBriefMarkdown(aiBrief.brief_markdown);
       } else {
         aiBriefStatus.textContent = "未生成";
         aiBriefText.textContent = "运行 AI 解读命令后，这里会显示本地研究简报。";
